@@ -17,6 +17,26 @@ from src.feature_engineering import create_features
 from src.analysis import vendor_analysis
 from src.model import train_model
 
+# ─── MOCK STUBS (remove when src is ready) ────
+# def clean_data(df): return df
+# def create_features(df):
+#     if "PR_VALUE" in df.columns and "NEGOTIATION_VAL" in df.columns:
+#         df["PR_VALUE"] = pd.to_numeric(df["PR_VALUE"], errors="coerce")
+#         df["NEGOTIATION_VAL"] = pd.to_numeric(df["NEGOTIATION_VAL"], errors="coerce")
+
+#         df["saving"] = (df["PR_VALUE"] - df["NEGOTIATION_VAL"]).abs()
+#     else:
+#         raise ValueError("Dataset must contain PR_VALUE and NEGOTIATION_VAL columns.")
+
+#     return df
+# def vendor_analysis(df):
+#     if "L1_PARTY_NAME" in df.columns:
+#         return df.groupby("L1_PARTY_NAME")["saving"].sum().sort_values(ascending=False).head(10)
+#     return pd.Series({"No vendor column": 0})
+# class _DummyModel:
+#     def predict(self, df): return [df["PR_VALUE"].iloc[0] * 0.05]
+# def train_model(df): return _DummyModel()
+
 # ──────────────────────────────────────────────
 # CONFIG
 # ──────────────────────────────────────────────
@@ -45,15 +65,66 @@ state = {
 }
 
 # ──────────────────────────────────────────────
-# GRADIO THEME
-# ──────────────────────────────────────────────
-
-
-# ──────────────────────────────────────────────
 # CSS
 # ──────────────────────────────────────────────
 CSS= """
 /* ===== GLOBAL ===== */
+/* ===== KPI CARDS ===== */
+.kpi-card {
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 6px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: popIn 0.4s ease;
+}
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(0,0,0,0.35);
+}
+.kpi-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+.kpi-value {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+.kpi-green  { background: linear-gradient(135deg, #1b5e20, #2e7d32); color: #c8f7c5; }
+.kpi-blue   { background: linear-gradient(135deg, #0d47a1, #1565c0); color: #bbdefb; }
+.kpi-purple { background: linear-gradient(135deg, #4a148c, #6a1b9a); color: #e1bee7; }
+.kpi-red    { background: linear-gradient(135deg, #b71c1c, #c62828); color: #ffcdd2; }
+
+/* ===== ALERT BOXES ===== */
+.alert-warn {
+    background: rgba(183, 28, 28, 0.2);
+    border: 1px solid rgba(239, 83, 80, 0.5);
+    border-left: 4px solid #ef5350;
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #ffcdd2;
+    font-size: 14px;
+    margin-top: 10px;
+    animation: fadeSlide 0.3s ease;
+}
+.alert-ok {
+    background: rgba(27, 94, 32, 0.2);
+    border: 1px solid rgba(67, 160, 71, 0.5);
+    border-left: 4px solid #43a047;
+    border-radius: 10px;
+    padding: 14px 18px;
+    color: #c8f7c5;
+    font-size: 14px;
+    margin-top: 10px;
+    animation: fadeSlide 0.3s ease;
+}
+
 body, .gradio-container {
     background: linear-gradient(135deg, #060f1d 0%, #0d1f3a 40%, #1a3f66 100%) !important;
     color: #f5f7fb !important;
@@ -192,6 +263,32 @@ p, li {
     font-size: 14px;
 }
 
+/* ===== TABS ===== */
+.tab-nav {
+    background: rgba(8, 20, 36, 0.9) !important;
+    border-radius: 14px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    margin-bottom: 16px !important;
+}
+.tab-nav button {
+    color: #8fb8e0 !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+    padding: 8px 14px !important;
+    transition: all 0.2s ease !important;
+}
+.tab-nav button.selected {
+    background: linear-gradient(135deg, #1565c0, #1e88e5) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(21,101,192,0.4) !important;
+}
+.tab-nav button:hover:not(.selected) {
+    background: rgba(255,255,255,0.08) !important;
+    color: #ffffff !important;
+}
+
 /* ===== ANIMATIONS ===== */
 @keyframes fadeSlide {
     from { opacity: 0; transform: translateY(-18px); }
@@ -201,6 +298,239 @@ p, li {
 @keyframes popIn {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: scale(1); }
+}
+
+/* ===== LOGO FIX ===== */
+
+/* outer container */
+#bsp-logo {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* DO NOT remove inner div completely — just clean it */
+#bsp-logo div {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* image styling */
+#bsp-logo img {
+    display: block;
+    margin: 0 auto;
+    max-height: 120px !important;
+    width: auto !important;
+    object-fit: contain !important;
+}
+
+/* remove only action icons (safe targeting) */
+#bsp-logo button[aria-label="Download"],
+#bsp-logo button[aria-label="Share"],
+#bsp-logo button[aria-label="Fullscreen"] {
+    display: none !important;
+}
+
+/* ===== LOGIN WRAPPER ===== */
+#login-wrapper {
+    align-items: center !important;
+    gap: 30px;
+}
+
+/* ===== LEFT PANEL ===== */
+#left-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+}
+
+/* BRAND BOX */
+#brand-box h1 {
+    font-size: 42px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+#brand-box .subtitle {
+    font-size: 18px;
+    color: #9ecbff;
+    margin-bottom: 10px;
+}
+
+#brand-box .desc {
+    font-size: 15px;
+    color: #dce9f7;
+    line-height: 1.7;
+}
+
+#brand-box ul {
+    margin-top: 10px;
+    padding-left: 18px;
+}
+
+#brand-box li {
+    margin-bottom: 6px;
+}
+
+/* LOGO BIGGER */
+#bsp-logo img {
+    max-height: 140px !important;
+}
+
+/* ===== RIGHT PANEL ===== */
+#right-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* LOGIN BOX (compact) */
+#login-box {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 10px;
+}
+
+/* REMOVE OLD BIG CARD EFFECT */
+#login-card {
+    display: none !important;
+}
+
+/* INPUT FULL WIDTH */
+#right-panel input {
+    width: 100%;
+}
+
+/* BUTTON FULL WIDTH */
+#right-panel button {
+    width: 100%;
+}
+
+/* REMOVE EXTRA SPACE */
+.gradio-container .gr-column {
+    gap: 12px !important;
+}
+
+/* ===== DATAFRAME TABLE ===== */
+table.dataframe {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 13px !important;
+}
+table.dataframe th {
+    background: linear-gradient(135deg, #0d47a1, #1565c0) !important;
+    color: #ffffff !important;
+    padding: 10px 14px !important;
+    font-weight: 700 !important;
+}
+table.dataframe td {
+    padding: 8px 14px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    color: #dce9f7 !important;
+}
+table.dataframe tr:hover td {
+    background: rgba(21, 101, 192, 0.15) !important;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #1565c0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #1e88e5; }
+
+/* ===== FILE UPLOAD ZONE ===== */
+.upload-button {
+    border: 2px dashed rgba(77,163,255,0.4) !important;
+    border-radius: 14px !important;
+    background: rgba(13,71,161,0.15) !important;
+    transition: all 0.2s ease !important;
+}
+.upload-button:hover {
+    border-color: #4da3ff !important;
+    background: rgba(13,71,161,0.3) !important;
+}
+
+/* ===== DATAFRAME TABLE ===== */
+table.dataframe {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 13px !important;
+}
+table.dataframe th {
+    background: linear-gradient(135deg, #0d47a1, #1565c0) !important;
+    color: #ffffff !important;
+    padding: 10px 14px !important;
+    font-weight: 700 !important;
+}
+table.dataframe td {
+    padding: 8px 14px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+    color: #dce9f7 !important;
+}
+table.dataframe tr:hover td {
+    background: rgba(21, 101, 192, 0.15) !important;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #1565c0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #1e88e5; }
+
+/* ===== FILE UPLOAD ZONE ===== */
+.upload-button {
+    border: 2px dashed rgba(77,163,255,0.4) !important;
+    border-radius: 14px !important;
+    background: rgba(13,71,161,0.15) !important;
+    transition: all 0.2s ease !important;
+}
+.upload-button:hover {
+    border-color: #4da3ff !important;
+    background: rgba(13,71,161,0.3) !important;
+}
+
+/* ===== LOGOUT BUTTON ===== */
+button.secondary {
+    background: rgba(183,28,28,0.3) !important;
+    border: 1px solid rgba(239,83,80,0.4) !important;
+    color: #ffcdd2 !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+button.secondary:hover {
+    background: rgba(183,28,28,0.6) !important;
+    border-color: #ef5350 !important;
+}
+
+/* ===== HIDE GRADIO PROCESSING TEXT ===== */
+div[class*="status"],
+div[class*="progress"] {
+    display: none !important;
+}
+
+/* ===== REMOVE GRADIO LOADING SPINNER ===== */
+
+/* main spinner container */
+div[class*="loading"],
+div[class*="spinner"] {
+    display: none !important;
+}
+
+/* svg spinner */
+svg[class*="spinner"],
+svg {
+    display: none !important;
+}
+
+/* overlay that blocks UI */
+div[class*="overlay"] {
+    display: none !important;
 }
 """
 # ──────────────────────────────────────────────
@@ -635,30 +965,41 @@ with gr.Blocks() as app:
 
     # ── LOGIN ──────────────────────────────────
     with gr.Column(visible=True) as login_page:
-        with gr.Row():
-            with gr.Column(scale=3):
-                gr.HTML("""
-<div id="login-banner">
-  <h2>🏭 Bhilai Steel Plant</h2>
-  <p style="font-size:16px; margin:0 0 14px; color:#b8d8fa;">
-    Procurement Intelligence Platform &mdash; Enterprise Edition
-  </p>
-  <p>
-    AI-powered analytics for procurement monitoring, vendor intelligence,
-    savings analysis, predictive modelling, and executive reporting.<br><br>
-    Role-based access ensures each user sees only what is relevant
-    to their function. All actions are audit-logged for compliance.
-  </p>
-</div>
-""")
-            with gr.Column(scale=2):
+        with gr.Row(elem_id="login-wrapper"):
+
+            # ===== LEFT PANEL =====
+            with gr.Column(scale=3, elem_id="left-panel"):
+
                 logo = get_logo()
                 if logo:
-                    gr.Image(value=logo, show_label=False, height=90)
+                    gr.Image(value=logo, show_label=False, elem_id="bsp-logo")
+
                 gr.HTML("""
-<div id="login-card">
-  <h3>&#x1F510; Secure Access Portal</h3>
-  <p>Authorized personnel only.</p>
+<div id="brand-box">
+  <h1>BSP Procurement Intelligence Platform</h1>
+  <p class="subtitle">Enterprise Procurement Analytics System</p>
+
+  <p class="desc">
+    AI-powered analytics for procurement monitoring, vendor intelligence,
+    savings analysis, predictive modelling, and executive reporting.
+  </p>
+
+  <ul>
+    <li> Vendor Intelligence & Insights</li>
+    <li> AI-based Saving Predictions</li>
+    <li> Executive Reports & Analytics</li>
+    <li> Full Audit Logging & Compliance</li>
+  </ul>
+</div>
+""")
+
+            # ===== RIGHT PANEL =====
+            with gr.Column(scale=2, elem_id="right-panel"):
+
+                gr.HTML("""
+<div id="login-box">
+  <h2>🔐 Secure Access Portal</h2>
+  <p>Authorized personnel only</p>
   <ul>
     <li>Role-based access &mdash; Admin / Analyst / Viewer</li>
     <li>Full audit trail enabled</li>
@@ -666,9 +1007,9 @@ with gr.Blocks() as app:
   </ul>
 </div>
 """)
-                username_in = gr.Textbox(label="User ID",   placeholder="Enter your user ID")
-                password_in = gr.Textbox(label="Password", placeholder="Enter your password",
-                                         type="password")
+
+                username_in = gr.Textbox(label="User ID", placeholder="Enter your user ID")
+                password_in = gr.Textbox(label="Password", placeholder="Enter your password", type="password")
                 login_btn = gr.Button("🔓 Login", variant="primary")
 
     # ── MAIN APP ───────────────────────────────
@@ -676,8 +1017,9 @@ with gr.Blocks() as app:
         session_bar = gr.HTML()
 
         with gr.Row():
-            logout_btn = gr.Button("🚪 Logout", variant="secondary", scale=0)
-
+             gr.HTML("<div style='flex:1'></div>")  # spacer pushes button right
+             logout_btn = gr.Button("🚪 Logout", variant="secondary", scale=0)
+ 
         with gr.Tabs():
 
             # HOME ───────────────────────────────
@@ -704,22 +1046,38 @@ with gr.Blocks() as app:
     <li>&#x1F4CB; Maintain a full audit trail of all user actions</li>
   </ul>
   <h3>Access Levels</h3>
-  <table>
-    <tr><th>Role</th><th>Access</th></tr>
-    <tr><td><strong>Admin</strong></td>
-        <td>Full access including Audit Log</td></tr>
-    <tr><td><strong>Analyst</strong></td>
-        <td>Analytics, Prediction, Reports, Data Quality</td></tr>
-    <tr><td><strong>Viewer</strong></td>
-        <td>Home, Analytics, Vendor Intelligence (read-only)</td></tr>
+  <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+    <thead>
+      <tr style="background:linear-gradient(135deg,#1565c0,#1e88e5);">
+        <th style="padding:10px 16px;color:#fff;text-align:left;border-radius:8px 0 0 0;">Role</th>
+        <th style="padding:10px 16px;color:#fff;text-align:left;border-radius:0 8px 0 0;">Access</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:rgba(255,255,255,0.05);">
+        <td style="padding:10px 16px;color:#c8f7c5;font-weight:700;">&#x1F6E1;&#xFE0F; Admin</td>
+        <td style="padding:10px 16px;color:#dce9f7;">Full access including Audit Log</td>
+      </tr>
+      <tr style="background:rgba(255,255,255,0.03);">
+        <td style="padding:10px 16px;color:#bbdefb;font-weight:700;">&#x1F4CA; Analyst</td>
+        <td style="padding:10px 16px;color:#dce9f7;">Analytics, Prediction, Reports, Data Quality</td>
+      </tr>
+      <tr style="background:rgba(255,255,255,0.05);">
+        <td style="padding:10px 16px;color:#e1bee7;font-weight:700;">&#x1F441;&#xFE0F; Viewer</td>
+        <td style="padding:10px 16px;color:#dce9f7;">Home, Analytics, Vendor Intelligence (read-only)</td>
+      </tr>
+    </tbody>
   </table>
 </div>
 """)
                     with gr.Column(scale=2):
                         gr.Gallery(
-                            value=safe_images(), label="", show_label=False,
-                            columns=1, height=420, object_fit="cover",
-                            preview=True, elem_id="bsp-gallery",
+                           value=safe_images(),
+                           show_label=False,
+                           columns=1,
+                           height="auto",          
+                           object_fit="contain",
+                           elem_id="bsp-gallery",
                         )
 
             # ANALYTICS ──────────────────────────
@@ -843,7 +1201,6 @@ with gr.Blocks() as app:
 </div>
 """)
 
-    # WIRING ──────────────────────────────────
     login_btn.click(
         fn=login,
         inputs=[username_in, password_in],
@@ -854,4 +1211,4 @@ with gr.Blocks() as app:
         outputs=[main_app, login_page, session_bar, login_status],
     )
 
-app.launch(css=CSS)
+app.launch(css=CSS, inbrowser=True)
