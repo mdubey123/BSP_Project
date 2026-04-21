@@ -1,172 +1,254 @@
 # 🏭 BSP Procurement Intelligence Platform
 
-An AI-powered analytics and decision-support system built for **Bhilai Steel Plant (BSP)** to analyze procurement data, evaluate vendor performance, and predict savings using machine learning.
+An AI-powered procurement analytics and decision-support system built for **Bhilai Steel Plant (BSP)**.
+This platform enables data-driven insights, vendor evaluation, and saving prediction using machine learning.
 
 ---
 
-## 🚀 Overview
+## 🚀 Project Overview
 
-This project provides a complete end-to-end solution for procurement analytics:
+The BSP Procurement Intelligence Platform is designed to:
 
-* 📊 Data Analysis & Visualization
-* 🏭 Vendor Performance Evaluation
-* 🤖 Machine Learning-based Prediction
-* 📄 Automated Report Generation
-* 🎯 Interactive Dashboard (Gradio UI)
+* Analyze procurement data
+* Identify cost-saving opportunities
+* Evaluate vendor performance
+* Predict expected savings using ML
+* Generate reports for decision-making
+
+It provides a **complete end-to-end pipeline** from raw data → insights → prediction → reporting.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
 ### 🔐 Secure Login System
 
-* Username & password-based access
-* Clean enterprise-style UI
+* Role-based authentication (Admin, Analyst, Viewer)
+* Session tracking & audit logging
 
-### 📂 Dynamic Data Upload
-
-* Upload Excel datasets (.xlsx)
-* Automatically processes multiple sheets
+---
 
 ### 📊 Analytics Dashboard
 
-* Saving distribution charts
-* Key procurement insights
-* KPI summary
+* Upload Excel datasets (multi-sheet supported)
+* Automatic preprocessing & feature engineering
+* KPI generation:
+
+  * Total Saving
+  * Average Saving
+  * Total Records
+  * Loss Cases
+
+---
+
+### 📈 Data Visualization
+
+* Saving distribution (histogram)
+* Vendor performance charts
+* Monthly trend analysis
+
+---
 
 ### 🏭 Vendor Intelligence
 
-* Top vendors based on savings
-* Data-driven vendor evaluation
+* Top vendors ranked by total savings
+* Profitability classification:
+
+  * ✅ Profitable
+  * ❌ Loss-making
+
+---
 
 ### 🤖 AI Prediction Engine
 
-* Predict procurement savings using ML model
-* Inputs:
+* Predict expected saving using:
 
   * PR Value
   * Negotiation Value
 
-### 📄 Report Generation
+* Model: **Linear Regression**
 
-* Generate downloadable PDF reports
-* Summary of procurement insights
+* Output includes:
+
+  * Predicted saving
+  * Savings %
+  * Status (Profit/Loss)
 
 ---
 
-## 🧠 Tech Stack
+### 📄 Report Generation
 
-* Python
-* Pandas
-* Scikit-learn
-* Matplotlib & Seaborn
-* Gradio
-* ReportLab
+* Export:
+
+  * 📄 PDF reports
+  * 📊 Excel reports
+* Includes KPI summary + vendor analysis
+
+---
+
+### 🔍 Data Quality Check
+
+* Missing value analysis
+* Duplicate detection
+* Statistical insights
+
+---
+
+### 📋 Audit Logging
+
+* Tracks all user actions:
+
+  * Login
+  * Data upload
+  * Predictions
+  * Exports
+
+---
+
+## 🧠 Machine Learning Approach
+
+* Algorithm: **Linear Regression**
+* Features used:
+
+  * `PR_VALUE`
+  * `NEGOTIATION_VAL`
+* Target:
+
+  * `saving = PR_VALUE - NEGOTIATION_VAL`
+
+This ensures alignment between:
+
+* input fields (UI)
+* model training
+* prediction output
+
+---
+
+## 🛠️ Tech Stack
+
+* **Python**
+* **Pandas** (Data processing)
+* **Scikit-learn** (ML model)
+* **Matplotlib & Seaborn** (Visualization)
+* **Gradio** (Frontend UI)
+* **ReportLab** (PDF generation)
 
 ---
 
 ## 📁 Project Structure
 
+```
 BSP_Project/
 │
-├── assets/
-├── data/
-├── src/
-│   ├── data_loader.py
+├── assets/                # Images (BSP photos, logo)
+├── data/                  # Dataset folder
+│
+├── src/                   # Backend logic
 │   ├── preprocessing.py
 │   ├── feature_engineering.py
 │   ├── analysis.py
 │   └── model.py
 │
-├── gradio_app.py
-├── requirements.txt
-└── README.md
+├── gradio_app.py          # Main application (UI + integration)
+├── requirements.txt       # Dependencies
+└── README.md              # Documentation
+```
 
 ---
 
-## ⚙️ Installation
+## ⚙️ Installation & Setup
 
-1. Clone the repository
-   git clone https://github.com/your-username/BSP-Procurement-Intelligence.git
+### 1️⃣ Clone Repository
 
-2. Go to project folder
-   cd BSP-Procurement-Intelligence
+```bash
+git clone https://github.com/your-username/BSP-Procurement-Intelligence.git
+cd BSP-Procurement-Intelligence
+```
 
-3. Install dependencies
-   pip install -r requirements.txt
+---
 
-4. Run the app
-   python gradio_app.py
+### 2️⃣ Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+### 3️⃣ Run Application
+
+```bash
+python gradio_app.py
+```
 
 ---
 
 ## 🔑 Login Credentials
 
-Username: bsp_admin
-Password: BSP_2026_AI
+```
+Admin:
+User ID: bsp_admin
+Password: admin@2026
+
+Analyst:
+User ID: bsp_analyst
+Password: analyst@2026
+
+Viewer:
+User ID: bsp_viewer
+Password: view@2026
+```
 
 ---
 
 ## 📊 How to Use
 
-1. Login to the system
-2. Go to Analytics tab
+1. Login to the platform
+2. Go to **Analytics tab**
 3. Upload dataset (.xlsx)
-4. View charts and insights
-5. Use:
+4. View KPIs and charts
+5. Explore:
 
    * Vendor Intelligence
    * Prediction Engine
    * Reports
+6. Generate PDF/Excel reports
 
 ---
 
-## 🧪 Machine Learning Model
+## 📌 Use Cases
 
-* Algorithm: Linear Regression
-* Inputs:
-
-  * PR_VALUE
-  * NEGOTIATION_VAL
-* Output:
-
-  * Predicted Saving
+* Procurement cost optimization
+* Vendor performance analysis
+* Loss detection in contracts
+* Decision support for management
 
 ---
 
-## 📌 Use Case
+## 🎯 Future Enhancements
 
-This system helps:
-
-* Identify cost-saving opportunities
-* Evaluate vendor efficiency
-* Detect loss-making procurements
-* Support data-driven decision-making
-
----
-
-## 🎯 Future Improvements
-
-* Advanced ML models
+* Advanced ML models (Random Forest, XGBoost)
 * Real-time database integration
-* Role-based authentication
-* Cloud deployment
+* Cloud deployment (AWS/Azure)
+* Role-based dashboards
+* Predictive anomaly detection
 
 ---
 
 ## 👩‍💻 Author
 
-Manya Dubey
+**Manya Dubey**
 Computer Science Student
 
 ---
 
 ## 📜 License
 
-This project is for academic and demonstration purposes.
+This project is for **academic and demonstration purposes only**.
 
 ---
 
 ## ⭐ Acknowledgement
 
-Inspired by procurement processes at Bhilai Steel Plant (BSP).
+Inspired by real-world procurement workflows at
+**Bhilai Steel Plant (SAIL), India**

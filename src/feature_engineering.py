@@ -8,14 +8,17 @@ def create_features(df):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-    # Create saving
-    df['saving'] = df['PR_VALUE'] - df['PO_VALUE']
+    # IMPORTANT:
+    # For the current prediction UI, saving must be based on
+    # PR_VALUE and NEGOTIATION_VAL, because those are the inputs
+    # given to the model in the frontend.
+    df['saving'] = df['PR_VALUE'] - df['NEGOTIATION_VAL']
 
-    # Negotiation impact
+    # Optional supporting feature
     if 'L1_VALUE' in df.columns:
-        df['negotiation_impact'] = df['L1_VALUE'] - df['PO_VALUE']
+        df['negotiation_impact'] = df['L1_VALUE'] - df['NEGOTIATION_VAL']
 
-    # Saving percentage (avoid division error)
+    # Saving percentage
     df['saving_percent'] = (df['saving'] / df['PR_VALUE'].replace(0, pd.NA)) * 100
 
     return df

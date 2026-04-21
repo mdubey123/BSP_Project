@@ -1,0 +1,32 @@
+[
+  {
+    "timestamp": "2026-04-21 10:17:43",
+    "user": "bsp_admin",
+    "role": "Admin",
+    "action": "LOGIN"
+  },
+  {
+    "timestamp": "2026-04-21 10:17:51",
+    "user": "bsp_admin",
+    "role": "Admin",
+    "action": "UPLOAD: dataset.xlsx"
+  },
+  {
+    "timestamp": "2026-04-21 10:17:57",
+    "user": "bsp_admin",
+    "role": "Admin",
+    "action": "GENERATE: Analytics"
+  },
+  {
+    "timestamp": "2026-04-21 10:18:02",
+    "user": "bsp_admin",
+    "role": "Admin",
+    "action": "VIEW: Vendor Intelligence"
+  },
+  {
+    "timestamp": "2026-04-21 10:18:05",
+    "user": "bsp_admin",
+    "role": "Admin",
+    "action": "PREDICT: PR=1000000, Nego=500000"
+  }
+]
