@@ -740,13 +740,19 @@ def plot_saving_distribution():
         ax.axis("off"); return fig
     lo, hi = df["saving"].quantile(0.01), df["saving"].quantile(0.99)
     flt = df[(df["saving"]>=lo)&(df["saving"]<=hi)]
-    sns.histplot(flt["saving"], bins=50, kde=True, ax=ax,
-                 color="#1565c0", edgecolor="white", linewidth=.3)
-    ax.axvline(df["saving"].mean(),  color="#e53935", lw=1.8, ls="--", label="Mean")
-    ax.axvline(df["saving"].median(),color="#43a047", lw=1.8, ls=":",  label="Median")
+    flt["saving_lakh"] = flt["saving"] / 1e5
+
+    sns.histplot(flt["saving_lakh"], bins=50, kde=True, ax=ax,
+             color="#1565c0", edgecolor="white", linewidth=.3)
+    mean_val = flt["saving_lakh"].mean()
+    median_val = flt["saving_lakh"].median()
+
+    ax.axvline(mean_val, color="#e53935", lw=1.8, ls="--", label="Mean")
+    ax.axvline(median_val, color="#43a047", lw=1.8, ls=":", label="Median")
+    ax.ticklabel_format(style='plain', axis='x')
     ax.legend(fontsize=9, labelcolor="#0a1628")
     ax.set_title("Savings Distribution (1–99th Percentile)", fontsize=12, fontweight="bold")
-    ax.set_xlabel("Saving (₹)"); ax.set_ylabel("Frequency")
+    ax.set_xlabel("Saving (₹ Lakhs)"); ax.set_ylabel("Frequency")
     fig.tight_layout(); return fig
 
 def plot_vendor_chart():
@@ -757,37 +763,78 @@ def plot_vendor_chart():
         ax.text(0.5,0.5,"Upload dataset first",ha="center",va="center",color="#0a1628",fontsize=13)
         ax.axis("off"); return fig
     v = vendor_analysis(df).head(10).sort_values()
+    v = v / 1e5  # convert to lakhs
     clrs = ["#43a047" if x>=0 else "#e53935" for x in v.values]
     v.plot(kind="barh", ax=ax, color=clrs, edgecolor="white", linewidth=.3)
     ax.set_title("Top 10 Vendors by Savings", fontsize=12, fontweight="bold")
-    ax.set_xlabel("Total Saving (₹)"); ax.set_ylabel("Vendor")
+    ax.set_xlabel("Total Saving (₹ Lakhs)"); ax.set_ylabel("Vendor")
     fig.tight_layout(); return fig
 
-def plot_monthly_trend():
+def plot_loss_vendors():
     fig, ax = plt.subplots(figsize=(8, 4.2))
     _style(fig, ax)
+
     df = state["df"]
     if df is None:
-        ax.text(0.5,0.5,"Upload dataset first",ha="center",va="center",color="#0a1628",fontsize=13)
-        ax.axis("off"); return fig
-    dcols = [c for c in df.columns if "date" in c.lower() or "dt" in c.lower()]
-    if not dcols:
-        ax.text(0.5,0.5,"No date column found",ha="center",va="center",color="#0a1628",fontsize=13)
-        ax.axis("off"); return fig
-    tmp = df.copy()
-    tmp[dcols[0]] = pd.to_datetime(tmp[dcols[0]], errors="coerce")
-    monthly = tmp.groupby(tmp[dcols[0]].dt.to_period("M"))["saving"].sum()
-    monthly.index = monthly.index.astype(str)
-    monthly.plot(ax=ax, color="#1565c0", marker="o", linewidth=2.2)
-    ax.fill_between(range(len(monthly)), monthly.values, alpha=.15, color="#1565c0")
-    ax.set_title("Monthly Savings Trend", fontsize=12, fontweight="bold")
-    ax.set_xlabel("Month"); ax.set_ylabel("Total Saving (₹)")
-    ax.tick_params(axis="x", rotation=45)
-    fig.tight_layout(); return fig
+        ax.text(0.5,0.5,"Upload dataset first",ha="center",va="center")
+        ax.axis("off")
+        return fig
+
+    if "L1_PARTY_NAME" not in df.columns:
+        ax.text(0.5,0.5,"No vendor column",ha="center",va="center")
+        ax.axis("off")
+        return fig
+
+    loss_vendors = (
+        df.groupby("L1_PARTY_NAME")["saving"]
+        .sum()
+        .sort_values()
+        .head(10)
+    )
+
+    loss_vendors = loss_vendors / 1e5  # convert to lakhs
+
+    loss_vendors.plot(
+        kind="barh",
+        ax=ax,
+        color="#e53935",
+        edgecolor="white",
+        linewidth=0.3
+    )
+
+    ax.set_title("Top 10 Loss-Making Vendors", fontsize=12, fontweight="bold")
+    ax.set_xlabel("Total Loss (₹ Lakhs)")
+    ax.set_ylabel("Vendor")
+
+    fig.tight_layout()
+    return fig
+
+def plot_profit_loss_pie():
+    fig, ax = plt.subplots()
+
+    df = state["df"]
+    if df is None:
+        return fig
+
+    profit = (df["saving"] > 0).sum()
+    loss = (df["saving"] < 0).sum()
+
+    labels = ["Profit Cases", "Loss Cases"]
+    sizes = [profit, loss]
+
+    ax.pie(
+        sizes,
+        labels=labels,
+        autopct="%1.1f%%",
+        startangle=90
+    )
+
+    ax.set_title("Profit vs Loss Distribution")
+    return fig
 
 def generate_analytics():
     log_action("GENERATE: Analytics")
-    return plot_saving_distribution(), plot_vendor_chart(), plot_monthly_trend()
+    return plot_saving_distribution(), plot_vendor_chart(), plot_loss_vendors(), plot_profit_loss_pie()
 
 # ──────────────────────────────────────────────
 # AI INSIGHTS
@@ -1113,12 +1160,22 @@ with gr.Blocks() as app:
                 )
 
                 charts_btn = gr.Button("📊 Generate Analytics", variant="primary")
+                # FIRST ROW (2 charts)
                 with gr.Row():
+                  with gr.Column(scale=1):
                     chart1 = gr.Plot(label="Saving Distribution")
+                  with gr.Column(scale=1):
                     chart2 = gr.Plot(label="Top Vendors")
-                chart3 = gr.Plot(label="Monthly Trend")
+
+                # SECOND ROW (2 charts)
+                with gr.Row():
+                  with gr.Column(scale=1):
+                    chart3 = gr.Plot(label="Loss-Making Vendors")
+                  with gr.Column(scale=1):
+                    chart4 = gr.Plot(label="Profit vs Loss")
                 charts_btn.click(fn=generate_analytics,
-                                 outputs=[chart1, chart2, chart3])
+                                 outputs=[chart1, chart2, chart3, chart4]
+                                )
 
             # VENDOR ─────────────────────────────
             with gr.Tab("🏭 Vendor Intelligence"):

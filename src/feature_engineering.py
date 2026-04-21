@@ -14,7 +14,6 @@ def create_features(df):
     # given to the model in the frontend.
     df['saving'] = df['PR_VALUE'] - df['NEGOTIATION_VAL']
 
-    # Optional supporting feature
     if 'L1_VALUE' in df.columns:
         df['negotiation_impact'] = df['L1_VALUE'] - df['NEGOTIATION_VAL']
 

@@ -1,32 +1,20 @@
 [
   {
-    "timestamp": "2026-04-21 10:17:43",
+    "timestamp": "2026-04-22 03:03:26",
     "user": "bsp_admin",
     "role": "Admin",
     "action": "LOGIN"
   },
   {
-    "timestamp": "2026-04-21 10:17:51",
+    "timestamp": "2026-04-22 03:03:31",
     "user": "bsp_admin",
     "role": "Admin",
-    "action": "UPLOAD: dataset.xlsx"
+    "action": "UPLOAD: clean_dataset.xlsx"
   },
   {
-    "timestamp": "2026-04-21 10:17:57",
+    "timestamp": "2026-04-22 03:03:39",
     "user": "bsp_admin",
     "role": "Admin",
     "action": "GENERATE: Analytics"
-  },
-  {
-    "timestamp": "2026-04-21 10:18:02",
-    "user": "bsp_admin",
-    "role": "Admin",
-    "action": "VIEW: Vendor Intelligence"
-  },
-  {
-    "timestamp": "2026-04-21 10:18:05",
-    "user": "bsp_admin",
-    "role": "Admin",
-    "action": "PREDICT: PR=1000000, Nego=500000"
   }
 ]
