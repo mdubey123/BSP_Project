@@ -7,38 +7,53 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, Isol
 from sklearn.metrics import mean_absolute_error, r2_score, accuracy_score, classification_report
 
 def train_model(df):
-    # Candidate features
     numeric_features = [
-        "PR_VALUE", "RESPONSE", "NO_OF_TECHSUIT", "NO_OF_EXT",
-        "DUR_OF_CONTRACT", "PER_COMPLETED", "EXECUTED_QTY",
-        "DURATION_LEFT", "request_month", "request_quarter"
+        "PR_VALUE",
+        "RESPONSE",
+        "NO_OF_TECHSUIT",
+        "NO_OF_EXT",
+        "DUR_OF_CONTRACT",
+        "request_month",
+        "request_quarter"
     ]
 
     categorical_features = [
-        "RA_IND", "MSME_DET", "SCST_IND", "WOMAN_IND",
-        "PUR_GROUP", "PUR_ORG", "WERKS", "PO_MOT", "UNIT_OF_DUR"
+        "RA_IND",
+        "MSME_DET",
+        "WERKS",
+        "PUR_GROUP"
     ]
 
     numeric_features = [c for c in numeric_features if c in df.columns]
     categorical_features = [c for c in categorical_features if c in df.columns]
     all_features = numeric_features + categorical_features
 
-    # ---------- Preprocessor ----------
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", Pipeline([
-                ("imputer", SimpleImputer(strategy="median"))
-            ]), numeric_features),
-            ("cat", Pipeline([
-                ("imputer", SimpleImputer(strategy="most_frequent")),
-                ("onehot", OneHotEncoder(handle_unknown="ignore"))
-            ]), categorical_features),
-        ]
-    )
+    def make_preprocessor():
+        return ColumnTransformer(
+            transformers=[
+                (
+                    "num",
+                    Pipeline([
+                        ("imputer", SimpleImputer(strategy="median"))
+                    ]),
+                    numeric_features
+                ),
+                (
+                    "cat",
+                    Pipeline([
+                        ("imputer", SimpleImputer(strategy="most_frequent")),
+                        ("onehot", OneHotEncoder(handle_unknown="ignore"))
+                    ]),
+                    categorical_features
+                ),
+            ]
+        )
 
-    # ---------- Model 1: Negotiation value regression ----------
+    reg_preprocessor = make_preprocessor()
+    cls_preprocessor = make_preprocessor()
+
+    # Regression model
     reg_df = df[all_features + ["NEGOTIATION_VAL"]].dropna(subset=["NEGOTIATION_VAL"]).copy()
-
     X_reg = reg_df[all_features]
     y_reg = reg_df["NEGOTIATION_VAL"]
 
@@ -47,7 +62,7 @@ def train_model(df):
     )
 
     reg_model = Pipeline([
-        ("preprocessor", preprocessor),
+        ("preprocessor", reg_preprocessor),
         ("model", RandomForestRegressor(
             n_estimators=150,
             max_depth=12,
@@ -62,9 +77,8 @@ def train_model(df):
     print("MAE:", mean_absolute_error(yr_test, reg_pred))
     print("R2:", r2_score(yr_test, reg_pred))
 
-    # ---------- Model 2: Saving class classification ----------
+    # Classification model
     cls_df = df[all_features + ["saving_class"]].dropna(subset=["saving_class"]).copy()
-
     X_cls = cls_df[all_features]
     y_cls = cls_df["saving_class"]
 
@@ -73,7 +87,7 @@ def train_model(df):
     )
 
     cls_model = Pipeline([
-        ("preprocessor", preprocessor),
+        ("preprocessor", cls_preprocessor),
         ("model", RandomForestClassifier(
             n_estimators=150,
             max_depth=12,
@@ -88,13 +102,17 @@ def train_model(df):
     print("Accuracy:", accuracy_score(yc_test, cls_pred))
     print(classification_report(yc_test, cls_pred))
 
-    # ---------- Model 3: Anomaly detection ----------
+    # Anomaly model
     anomaly_features = [
         c for c in [
-            "PR_VALUE", "NEGOTIATION_VAL", "saving", "saving_percent",
-            "RESPONSE", "NO_OF_TECHSUIT", "NO_OF_EXT",
-            "DUR_OF_CONTRACT", "PER_COMPLETED", "EXECUTED_QTY",
-            "DURATION_LEFT"
+            "PR_VALUE",
+            "NEGOTIATION_VAL",
+            "saving",
+            "saving_percent",
+            "RESPONSE",
+            "NO_OF_TECHSUIT",
+            "NO_OF_EXT",
+            "DUR_OF_CONTRACT"
         ] if c in df.columns
     ]
 

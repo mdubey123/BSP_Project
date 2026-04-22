@@ -12,7 +12,6 @@ from reportlab.platypus import (
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors as rl_colors
 from reportlab.lib.units import inch
-
 from src.preprocessing import clean_data
 from src.feature_engineering import create_features
 from src.analysis import vendor_analysis
@@ -838,7 +837,7 @@ def plot_saving_distribution():
         ax.text(0.5,0.5,"Upload dataset first",ha="center",va="center",color="#0a1628",fontsize=13)
         ax.axis("off"); return fig
     lo, hi = df["saving"].quantile(0.01), df["saving"].quantile(0.99)
-    flt = df[(df["saving"]>=lo)&(df["saving"]<=hi)]
+    flt = df[(df["saving"]>=lo)&(df["saving"]<=hi)].copy()
     flt["saving_lakh"] = flt["saving"] / 1e5
 
     sns.histplot(flt["saving_lakh"], bins=50, kde=True, ax=ax,
@@ -976,93 +975,53 @@ def get_ai_insights():
 # ──────────────────────────────────────────────
 # PREDICTION
 # ──────────────────────────────────────────────
-def predict(
-    pr,
-    response,
-    techsuit,
-    no_ext,
-    dur_contract,
-    ra_ind,
-    msme_det,
-    werks,
-    pur_group
-):
-    log_action(
-        f"PREDICT: PR={pr}, RESPONSE={response}, TECHSUIT={techsuit}, "
-        f"EXT={no_ext}, DUR={dur_contract}, RA={ra_ind}, MSME={msme_det}, "
-        f"WERKS={werks}, PUR_GROUP={pur_group}"
-    )
+def predict(pr, response, techsuit, no_ext, dur_contract,
+            ra_ind, msme_det, werks, pur_group):
 
-    models = state.get("model")
-    if models is None:
-        return "⚠️ Please upload dataset first."
+    log_action(f"PREDICT: PR={pr}")
 
-    row = {
-        "PR_VALUE": pr,
-        "RESPONSE": response,
-        "NO_OF_TECHSUIT": techsuit,
-        "NO_OF_EXT": no_ext,
-        "DUR_OF_CONTRACT": dur_contract,
-        "RA_IND": ra_ind,
-        "MSME_DET": msme_det,
-        "WERKS": werks,
-        "PUR_GROUP": pur_group,
-        "request_month": None,
-        "request_quarter": None,
-        "PER_COMPLETED": None,
-        "EXECUTED_QTY": None,
-        "DURATION_LEFT": None,
-        "PUR_ORG": None,
-        "PO_MOT": None,
-        "UNIT_OF_DUR": None,
-        "SCST_IND": None,
-        "WOMAN_IND": None
-    }
+    try:
+        models = state["model"]
 
-    input_df = pd.DataFrame([row])
+        row = {
+            "PR_VALUE": pr,
+            "RESPONSE": response,
+            "NO_OF_TECHSUIT": techsuit,
+            "NO_OF_EXT": no_ext,
+            "DUR_OF_CONTRACT": dur_contract,
+            "RA_IND": ra_ind,
+            "MSME_DET": msme_det,
+            "WERKS": werks,
+            "PUR_GROUP": pur_group,
+            "request_month": 0,
+            "request_quarter": 0
+        }
 
-    # Regression: predicted negotiation value
-    predicted_negotiation = models["reg_model"].predict(input_df)[0]
+        input_df = pd.DataFrame([row])
 
-    # Derived saving
-    predicted_saving = pr - predicted_negotiation
-    predicted_pct = (predicted_saving / pr * 100) if pr else 0
+        train_features = models["features"]
 
-    # Classification
-    predicted_class = models["cls_model"].predict(input_df)[0]
+        input_df = input_df.reindex(columns=train_features)
+        input_df = input_df.fillna(0)
 
-    # Anomaly detection
-    anomaly_base = {
-        "PR_VALUE": pr,
-        "NEGOTIATION_VAL": predicted_negotiation,
-        "saving": predicted_saving,
-        "saving_percent": predicted_pct,
-        "RESPONSE": response,
-        "NO_OF_TECHSUIT": techsuit,
-        "NO_OF_EXT": no_ext,
-        "DUR_OF_CONTRACT": dur_contract,
-        "PER_COMPLETED": None,
-        "EXECUTED_QTY": None,
-        "DURATION_LEFT": None
-    }
+        predicted_negotiation = models["reg_model"].predict(input_df)[0]
+        predicted_saving = pr - predicted_negotiation
+        predicted_pct = (predicted_saving / pr * 100) if pr else 0
+        predicted_class = models["cls_model"].predict(input_df)[0]
 
-    anomaly_input = pd.DataFrame([anomaly_base])
-    anomaly_input = anomaly_input.reindex(columns=models["anomaly_features"], fill_value=None)
-    anomaly_input = models["anomaly_preprocessor"].transform(anomaly_input)
+        return (
+            f"### 🤖 Prediction Result\n\n"
+            f"PR Value: ₹{pr:,.2f}\n\n"
+            f"Predicted Negotiation: ₹{predicted_negotiation:,.2f}\n\n"
+            f"Predicted Saving: ₹{predicted_saving:,.2f}\n\n"
+            f"Saving %: {predicted_pct:.2f}%\n\n"
+            f"Class: {predicted_class}"
+        )
 
-    anomaly_flag = models["anomaly_model"].predict(anomaly_input)[0]
-    anomaly_text = "⚠️ Unusual Case" if anomaly_flag == -1 else "✅ Normal Case"
+    except Exception as e:
+        return f"❌ Prediction failed: {type(e).__name__}: {e}"
 
-    return (
-        f"### 🤖 Multi-Layer Prediction Result\n\n"
-        f"| Field | Value |\n|---|---|\n"
-        f"| PR Value | ₹{pr:,.2f} |\n"
-        f"| Predicted Negotiation Value | ₹{predicted_negotiation:,.2f} |\n"
-        f"| **Predicted Saving** | **₹{predicted_saving:,.2f}** |\n"
-        f"| Predicted Saving % | {predicted_pct:.2f}% |\n"
-        f"| Predicted Class | {predicted_class} |\n"
-        f"| Anomaly Check | {anomaly_text} |"
-    )
+        
 
 def batch_predict(file):
     log_action("BATCH PREDICT")
