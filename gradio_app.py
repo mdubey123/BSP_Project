@@ -976,22 +976,92 @@ def get_ai_insights():
 # ──────────────────────────────────────────────
 # PREDICTION
 # ──────────────────────────────────────────────
-def predict(pr, nego):
-    log_action(f"PREDICT: PR={pr}, Nego={nego}")
-    mdl = _get_model()
-    if mdl is None:
-        return "⚠️ Upload a dataset first to train the model."
-    pred = mdl.predict(pd.DataFrame({"PR_VALUE":[pr],"NEGOTIATION_VAL":[nego]}))[0]
-    pct  = (pred/pr*100) if pr else 0
-    st   = "✅ Positive Saving" if pred>=0 else "❌ Loss Predicted"
+def predict(
+    pr,
+    response,
+    techsuit,
+    no_ext,
+    dur_contract,
+    ra_ind,
+    msme_det,
+    werks,
+    pur_group
+):
+    log_action(
+        f"PREDICT: PR={pr}, RESPONSE={response}, TECHSUIT={techsuit}, "
+        f"EXT={no_ext}, DUR={dur_contract}, RA={ra_ind}, MSME={msme_det}, "
+        f"WERKS={werks}, PUR_GROUP={pur_group}"
+    )
+
+    models = state.get("model")
+    if models is None:
+        return "⚠️ Please upload dataset first."
+
+    row = {
+        "PR_VALUE": pr,
+        "RESPONSE": response,
+        "NO_OF_TECHSUIT": techsuit,
+        "NO_OF_EXT": no_ext,
+        "DUR_OF_CONTRACT": dur_contract,
+        "RA_IND": ra_ind,
+        "MSME_DET": msme_det,
+        "WERKS": werks,
+        "PUR_GROUP": pur_group,
+        "request_month": None,
+        "request_quarter": None,
+        "PER_COMPLETED": None,
+        "EXECUTED_QTY": None,
+        "DURATION_LEFT": None,
+        "PUR_ORG": None,
+        "PO_MOT": None,
+        "UNIT_OF_DUR": None,
+        "SCST_IND": None,
+        "WOMAN_IND": None
+    }
+
+    input_df = pd.DataFrame([row])
+
+    # Regression: predicted negotiation value
+    predicted_negotiation = models["reg_model"].predict(input_df)[0]
+
+    # Derived saving
+    predicted_saving = pr - predicted_negotiation
+    predicted_pct = (predicted_saving / pr * 100) if pr else 0
+
+    # Classification
+    predicted_class = models["cls_model"].predict(input_df)[0]
+
+    # Anomaly detection
+    anomaly_base = {
+        "PR_VALUE": pr,
+        "NEGOTIATION_VAL": predicted_negotiation,
+        "saving": predicted_saving,
+        "saving_percent": predicted_pct,
+        "RESPONSE": response,
+        "NO_OF_TECHSUIT": techsuit,
+        "NO_OF_EXT": no_ext,
+        "DUR_OF_CONTRACT": dur_contract,
+        "PER_COMPLETED": None,
+        "EXECUTED_QTY": None,
+        "DURATION_LEFT": None
+    }
+
+    anomaly_input = pd.DataFrame([anomaly_base])
+    anomaly_input = anomaly_input.reindex(columns=models["anomaly_features"], fill_value=None)
+    anomaly_input = models["anomaly_preprocessor"].transform(anomaly_input)
+
+    anomaly_flag = models["anomaly_model"].predict(anomaly_input)[0]
+    anomaly_text = "⚠️ Unusual Case" if anomaly_flag == -1 else "✅ Normal Case"
+
     return (
-        f"### Prediction Result\n\n"
+        f"### 🤖 Multi-Layer Prediction Result\n\n"
         f"| Field | Value |\n|---|---|\n"
         f"| PR Value | ₹{pr:,.2f} |\n"
-        f"| Negotiation Value | ₹{nego:,.2f} |\n"
-        f"| **Predicted Saving** | **₹{pred:,.2f}** |\n"
-        f"| Savings % | {pct:.2f}% |\n"
-        f"| Status | {st} |"
+        f"| Predicted Negotiation Value | ₹{predicted_negotiation:,.2f} |\n"
+        f"| **Predicted Saving** | **₹{predicted_saving:,.2f}** |\n"
+        f"| Predicted Saving % | {predicted_pct:.2f}% |\n"
+        f"| Predicted Class | {predicted_class} |\n"
+        f"| Anomaly Check | {anomaly_text} |"
     )
 
 def batch_predict(file):
@@ -1295,30 +1365,73 @@ with gr.Blocks() as app:
                 vendors_btn.click(fn=compute_processing_metrics, outputs=metrics_out)
                 vendors_btn.click(fn=detect_anomalies, outputs=anomaly_out)
 
-            # PREDICTION ─────────────────────────
+                        # PREDICTION ─────────────────────────
             with gr.Tab("🤖 Prediction"):
-                gr.Markdown("## 🤖 AI Saving Prediction Engine")
-                with gr.Accordion("🔍 Single Record Prediction", open=True):
-                    with gr.Row():
-                        pr_in   = gr.Number(label="PR Value (₹)",
-                                            value=1_000_000)
-                        nego_in = gr.Number(label="Negotiation Value (₹)",
-                                            value=500_000)
-                    pred_out = gr.Markdown()
-                    pred_btn = gr.Button("⚡ Predict Saving", variant="primary")
-                    pred_btn.click(fn=predict, inputs=[pr_in, nego_in],
-                                   outputs=pred_out)
+                gr.Markdown("## 🤖 Multi-Layer AI Prediction Engine")
 
+                # ── SINGLE PREDICTION ───────────
+                with gr.Accordion("🔍 Single Record Prediction", open=True):
+
+                    with gr.Row():
+                        pr_in = gr.Number(label="PR Value (₹)", value=1_000_000)
+                        response_in = gr.Number(label="Response", value=1)
+                        techsuit_in = gr.Number(label="No. of Tech Suit", value=1)
+
+                    with gr.Row():
+                        no_ext_in = gr.Number(label="No. of Extensions", value=0)
+                        dur_contract_in = gr.Number(label="Contract Duration", value=30)
+
+                    with gr.Row():
+                        ra_ind_in = gr.Dropdown(
+                            choices=["Y", "N", "Unknown"],
+                            value="Unknown",
+                            label="RA Indicator"
+                        )
+                        msme_in = gr.Dropdown(
+                            choices=["Y", "N", "Unknown"],
+                            value="Unknown",
+                            label="MSME"
+                        )
+
+                    with gr.Row():
+                        werks_in = gr.Textbox(label="WERKS (Plant Code)", placeholder="Optional")
+                        pur_group_in = gr.Textbox(label="PUR_GROUP", placeholder="Optional")
+
+                    pred_out = gr.Markdown()
+                    pred_btn = gr.Button("⚡ Run AI Prediction", variant="primary")
+
+                    pred_btn.click(
+                        fn=predict,
+                        inputs=[
+                            pr_in,
+                            response_in,
+                            techsuit_in,
+                            no_ext_in,
+                            dur_contract_in,
+                            ra_ind_in,
+                            msme_in,
+                            werks_in,
+                            pur_group_in
+                        ],
+                        outputs=pred_out
+                    )
+
+                # ── BATCH PREDICTION ───────────
                 with gr.Accordion("📁 Batch Prediction (CSV Upload)", open=False):
-                    gr.Markdown(
-                        "_CSV must have columns: `PR_VALUE` and `NEGOTIATION_VAL`_")
-                    batch_file   = gr.File(label="Upload CSV")
+                    gr.Markdown("_CSV must have columns: `PR_VALUE` and `NEGOTIATION_VAL`_")
+
+                    batch_file = gr.File(label="Upload CSV")
                     batch_status = gr.Textbox(label="Status", interactive=False)
-                    batch_out    = gr.File(label="Download Predictions (.xlsx)")
-                    batch_btn    = gr.Button("📥 Run Batch Prediction",
-                                            variant="primary")
-                    batch_btn.click(fn=batch_predict, inputs=batch_file,
-                                    outputs=[batch_out, batch_status])
+                    batch_out = gr.File(label="Download Predictions (.xlsx)")
+
+                    batch_btn = gr.Button("📥 Run Batch Prediction", variant="primary")
+
+                    batch_btn.click(
+                        fn=batch_predict,
+                        inputs=batch_file,
+                        outputs=[batch_out, batch_status]
+                    )
+
 
             # REPORTS ────────────────────────────
             with gr.Tab("📄 Reports"):
