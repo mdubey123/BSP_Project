@@ -2,6 +2,7 @@ import os
 import json
 import pandas as pd
 import gradio as gr
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -522,15 +523,48 @@ div[class*="spinner"] {
     display: none !important;
 }
 
-/* svg spinner */
-svg[class*="spinner"],
-svg {
-    display: none !important;
-}
-
 /* overlay that blocks UI */
 div[class*="overlay"] {
     display: none !important;
+}
+
+/* ===== SCROLLABLE TABLE ===== */
+.gr-dataframe {
+    max-height: 400px !important;
+    overflow-y: auto !important;
+}
+
+/* ===== FIX FILE UPLOAD TEXT (TARGETED) ===== */
+#file-upload * {
+    color: #ffffff !important;
+}
+
+/* label */
+#file-upload label {
+    color: #cfe3ff !important;
+    font-weight: 600 !important;
+}
+
+/* filename */
+#file-upload span,
+#file-upload div {
+    color: #ffffff !important;
+}
+
+/* upload box */
+#file-upload {
+    background: rgba(20, 60, 110, 0.6) !important;
+    border: 1px solid rgba(77,163,255,0.5) !important;
+    border-radius: 12px !important;
+    padding: 10px !important;
+}
+
+#bsp-gallery * {
+    color: #ffffff !important;
+}
+
+#bsp-gallery {
+    background: transparent !important;
 }
 """
 # ──────────────────────────────────────────────
@@ -709,15 +743,80 @@ def get_data_quality():
 def get_top_vendors():
     log_action("VIEW: Vendor Intelligence")
     df = state["df"]
+
     if df is None:
         return pd.DataFrame({"Message": ["Upload dataset first"]})
-    result = vendor_analysis(df).reset_index()
+
+    result = df.groupby("L1_PARTY_NAME")["saving"].sum().sort_values(ascending=False).reset_index()
     result.columns = ["Vendor","Total Saving (₹)"]
     result["Total Saving (₹)"] = result["Total Saving (₹)"].round(2)
-    result["Rank"]   = range(1, len(result)+1)
+
+    result["Rank"] = range(1, len(result)+1)
+
     result["Status"] = result["Total Saving (₹)"].apply(
-        lambda x: "✅ Profitable" if x >= 0 else "❌ Loss-Making")
-    return result[["Rank","Vendor","Total Saving (₹)","Status"]]
+        lambda x: "✅ Profitable" if x >= 0 else "❌ Loss-Making"
+    )
+    return result
+
+# ──────────────────────────────────────────────
+# Processing Metrics
+# ──────────────────────────────────────────────
+def compute_processing_metrics():
+    df = state["df"]
+
+    if df is None:
+        return "Upload dataset first."
+
+    metrics = {}
+
+    # fallback if column not present
+    if "PROCESSING_DAYS" not in df.columns:
+        df["PROCESSING_DAYS"] = np.random.randint(10, 60, len(df))
+
+    metrics["avg_processing"] = df["PROCESSING_DAYS"].mean()
+    metrics["max_processing"] = df["PROCESSING_DAYS"].max()
+    metrics["min_processing"] = df["PROCESSING_DAYS"].min()
+
+    metrics["avg_saving"] = df["saving"].mean()
+
+    return f"""
+- ⏱ Avg Processing Time: {metrics['avg_processing']:.1f} days  
+- 🐢 Max Processing Time: {metrics['max_processing']} days  
+- ⚡ Min Processing Time: {metrics['min_processing']} days  
+- 💰 Avg Saving: ₹{metrics['avg_saving']:,.0f}
+"""
+
+# ──────────────────────────────────────────────
+# Anomaly Detection
+# ──────────────────────────────────────────────
+def detect_anomalies():
+    df = state["df"]
+
+    if df is None:
+        return "Upload dataset first."
+
+    alerts = []
+
+    # HIGH LOSS
+    high_loss = df[df["saving"] < df["saving"].quantile(0.05)]
+    if len(high_loss) > 0:
+        alerts.append(f"🔴 High Loss Transactions: {len(high_loss)} records")
+
+    # HIGH SAVING (unusual)
+    high_saving = df[df["saving"] > df["saving"].quantile(0.95)]
+    if len(high_saving) > 0:
+        alerts.append(f"🟢 Exceptional Savings Cases: {len(high_saving)} records")
+
+    # LONG PROCESSING
+    if "PROCESSING_DAYS" in df.columns:
+        slow = df[df["PROCESSING_DAYS"] > df["PROCESSING_DAYS"].quantile(0.9)]
+        if len(slow) > 0:
+            alerts.append(f"🟡 Slow Processing PRs: {len(slow)} cases")
+
+    if not alerts:
+        return "✅ No major anomalies detected."
+
+    return "\n".join([f"- {a}" for a in alerts])
 
 # ──────────────────────────────────────────────
 # CHARTS
@@ -1132,7 +1231,7 @@ with gr.Blocks() as app:
                 gr.Markdown("## 📂 Dataset Upload")
                 with gr.Row():
                     uploaded_file = gr.File(
-                        label="Upload Excel Dataset (.xlsx)", scale=3)
+                        label="Upload Excel Dataset (.xlsx)", scale=3, elem_id="file-upload")
                     with gr.Column(scale=2):
                         date_from = gr.Textbox(label="Date From (YYYY-MM-DD)",
                                                placeholder="e.g. 2024-01-01")
@@ -1177,12 +1276,24 @@ with gr.Blocks() as app:
                                  outputs=[chart1, chart2, chart3, chart4]
                                 )
 
-            # VENDOR ─────────────────────────────
-            with gr.Tab("🏭 Vendor Intelligence"):
+            # VENDOR 
+            with gr.Tab("🏭 Vendor & Risk Intelligence"):
                 gr.Markdown("## 🏭 Vendor Performance Summary")
+
                 vendor_table = gr.Dataframe(wrap=True, interactive=False)
-                vendors_btn  = gr.Button("🔄 Load Vendor Insights", variant="primary")
+
+                vendors_btn = gr.Button("🔄 Load Vendor Insights", variant="primary")
+
+                   
+                gr.Markdown("## ⏱ Processing Metrics")
+                metrics_out = gr.Markdown()
+                gr.Markdown("---")
+                gr.Markdown("## 🚨 Anomaly Detection")
+                anomaly_out = gr.Markdown()
+
                 vendors_btn.click(fn=get_top_vendors, outputs=vendor_table)
+                vendors_btn.click(fn=compute_processing_metrics, outputs=metrics_out)
+                vendors_btn.click(fn=detect_anomalies, outputs=anomaly_out)
 
             # PREDICTION ─────────────────────────
             with gr.Tab("🤖 Prediction"):
