@@ -62,6 +62,7 @@ state = {
     "df": None, "model": None,
     "current_user": None, "current_role": None,
     "login_time": None, "audit_log": [],
+    "pur_group_options": [],
 }
 
 # ──────────────────────────────────────────────
@@ -781,6 +782,13 @@ def process_data(file, date_from, date_to):
         state["df"] = processed_df
         state["model"] = train_model(processed_df)
 
+        if "PUR_GROUP" in processed_df.columns:
+            state["pur_group_options"] = sorted(
+                processed_df["PUR_GROUP"].dropna().astype(str).unique().tolist()
+            )
+        else:
+            state["pur_group_options"] = []
+
         ts, av, tr, lc = _kpi_values()
 
         h1 = _kpi_html("💰 Total Saving", f"₹{ts:,.0f}", "kpi-green")
@@ -807,7 +815,13 @@ def process_data(file, date_from, date_to):
             f"📊 Rows: {len(processed_df):,} | Columns: {len(processed_df.columns)}"
         )
 
-        return status, h1, h2, h3, h4, alert_html, _data_quality_report()
+        return (
+            status,
+            h1, h2, h3, h4,
+            alert_html,
+            _data_quality_report(),
+            gr.update(choices=state["pur_group_options"], value=None)
+        )
 
     except Exception as e:
         return (
@@ -817,7 +831,8 @@ def process_data(file, date_from, date_to):
             _EMPTY,
             _EMPTY,
             f"<div class='alert-warn'>❌ Error: {type(e).__name__}: {e}</div>",
-            f"❌ Error: {type(e).__name__}: {e}"
+            f"❌ Error: {type(e).__name__}: {e}",
+            gr.update(choices=[], value=None)
         )
 
 # ──────────────────────────────────────────────
@@ -1415,12 +1430,6 @@ with gr.Blocks() as app:
 
                 dq_hidden = gr.Markdown(visible=False)
 
-                uploaded_file.change(
-                    fn=process_data,
-                    inputs=[uploaded_file, date_from, date_to],
-                    outputs=[upload_status, kpi1, kpi2, kpi3, kpi4,
-                             alert_html, dq_hidden],
-                )
 
                 charts_btn = gr.Button("📊 Generate Analytics", variant="primary")
                 # FIRST ROW (2 charts)
@@ -1479,7 +1488,7 @@ with gr.Blocks() as app:
                         ra_ind_in = gr.Dropdown(
                             choices=["Y", "N", "Unknown"],
                             value="Unknown",
-                            label="RA Indicator"
+                            label="Reverse Auction (RA)"
                         )
                         msme_in = gr.Dropdown(
                             choices=["Y", "N", "Unknown"],
@@ -1489,7 +1498,11 @@ with gr.Blocks() as app:
 
                     with gr.Row():
                         werks_in = gr.Textbox(label="WERKS (Plant Code)", placeholder="Optional")
-                        pur_group_in = gr.Textbox(label="PUR_GROUP", placeholder="Optional")
+                        pur_group_in = gr.Dropdown(
+                            choices=[],
+                            label="PUR_GROUP",
+                            allow_custom_value=False
+                        )
 
                     pred_out = gr.Markdown()
                     pred_btn = gr.Button("⚡ Run AI Prediction", variant="primary")
@@ -1508,6 +1521,11 @@ with gr.Blocks() as app:
                             pur_group_in
                         ],
                         outputs=pred_out
+                    )
+                    uploaded_file.change(
+                        fn=process_data,
+                        inputs=[uploaded_file, date_from, date_to],
+                        outputs=[upload_status, kpi1, kpi2, kpi3, kpi4,alert_html, dq_hidden, pur_group_in],
                     )
 
                 # ── BATCH PREDICTION ───────────
