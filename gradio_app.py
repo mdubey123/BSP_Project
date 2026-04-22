@@ -668,6 +668,51 @@ div[class*="overlay"] {
     transition: 0.25s ease;
     box-shadow: 0 14px 35px rgba(0,0,0,0.45);
 }
+
+/* ===== REMOVE GREY BORDERS FROM DROPDOWNS ===== */
+.gradio-container .gr-dropdown,
+.gradio-container select,
+div[data-testid="dropdown"],
+div[data-testid="dropdown"] > div,
+div[data-testid="dropdown"] > div > div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* ===== STYLE THE ACTUAL SELECT INPUT ===== */
+div[data-testid="dropdown"] select,
+div[data-testid="dropdown"] input {
+    background: rgba(20, 50, 90, 0.85) !important;
+    border: 1px solid rgba(100, 180, 255, 0.35) !important;
+    border-radius: 12px !important;
+    color: #ffffff !important;
+    padding: 12px !important;
+}
+
+/* ===== REMOVE GREY BLOCK WRAPPER ON ALL FORM ELEMENTS ===== */
+.gradio-container .block,
+.gradio-container .form,
+.gradio-container fieldset {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+/* ===== DROPDOWN ITEM LIST ===== */
+ul[data-testid="dropdown-options"] {
+    background: #0d1f3a !important;
+    border: 1px solid rgba(100, 180, 255, 0.3) !important;
+    border-radius: 12px !important;
+}
+ul[data-testid="dropdown-options"] li {
+    color: #dce9f7 !important;
+}
+ul[data-testid="dropdown-options"] li:hover {
+    background: rgba(21, 101, 192, 0.3) !important;
+}
 """
 # ──────────────────────────────────────────────
 # HELPERS
