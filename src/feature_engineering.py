@@ -14,11 +14,11 @@ def create_features(df):
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # Business target
-    df["saving"] = df["PR_VALUE"] - df["NEGOTIATION_VAL"]
-
-    # Saving percentage
-    df["saving_percent"] = (df["saving"] / df["PR_VALUE"].replace(0, pd.NA)) * 100
-
+    if "PR_VALUE" in df.columns and "NEGOTIATION_VAL" in df.columns:
+        df["saving"] = df["PR_VALUE"] - df["NEGOTIATION_VAL"]
+        df["saving_percent"] = (df["saving"] / df["PR_VALUE"].replace(0, pd.NA)) * 100
+    else:
+        raise ValueError("Dataset must contain PR_VALUE and NEGOTIATION_VAL columns.")
     # Negotiation impact
     if "L1_VALUE" in df.columns:
         df["negotiation_impact"] = df["L1_VALUE"] - df["NEGOTIATION_VAL"]
@@ -37,16 +37,17 @@ def create_features(df):
         df["request_quarter"] = df["INSERT_DATE"].dt.quarter
 
     # Classification target
-    def classify_saving(x):
-        if pd.isna(x):
+    def classify_saving_pct(pct):
+        if pd.isna(pct):
             return None
-        if x < 0:
+        if pct < 0:
             return "Loss"
-        elif x <= 100000:
+        elif pct <= 10:
             return "Low Saving"
         else:
             return "High Saving"
 
-    df["saving_class"] = df["saving"].apply(classify_saving)
+    df["saving_class"] = df["saving_percent"].apply(classify_saving_pct)
+   
 
     return df

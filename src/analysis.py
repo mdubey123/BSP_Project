@@ -9,7 +9,7 @@ def plot_saving_distribution(df):
     lower = df['saving'].quantile(0.01)
     upper = df['saving'].quantile(0.99)
 
-    df_filtered = df[(df['saving'] >= lower) & (df['saving'] <= upper)]
+    df_filtered = df[(df['saving'] >= lower) & (df['saving'] <= upper)].copy()
 
     plt.figure(figsize=(10, 6))
     sns.histplot(df_filtered['saving'], bins=50, kde=True)

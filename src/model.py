@@ -6,6 +6,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier, IsolationForest
 from sklearn.metrics import mean_absolute_error, r2_score, accuracy_score, classification_report
 
+
 def train_model(df):
     numeric_features = [
         "PR_VALUE",
@@ -53,9 +54,29 @@ def train_model(df):
     cls_preprocessor = make_preprocessor()
 
     # Regression model
-    reg_df = df[all_features + ["NEGOTIATION_VAL"]].dropna(subset=["NEGOTIATION_VAL"]).copy()
+
+    reg_df = df[all_features + ["NEGOTIATION_VAL"]].dropna(
+    subset=["PR_VALUE", "NEGOTIATION_VAL"]
+    ).copy()
+
+    reg_df = reg_df[
+        (reg_df["PR_VALUE"] > 0) &
+        (reg_df["NEGOTIATION_VAL"] >= 0) &
+        (reg_df["NEGOTIATION_VAL"] <= reg_df["PR_VALUE"])
+    ].copy()
+
+    # target = negotiation ratio
+    reg_df["negotiation_ratio"] = reg_df["NEGOTIATION_VAL"] / reg_df["PR_VALUE"]
+
+    # remove near-no-saving cases so model learns meaningful variation
+    # keep all realistic values instead
+    reg_df = reg_df[
+        (reg_df["negotiation_ratio"] > 0) &
+        (reg_df["negotiation_ratio"] <= 1)
+    ].copy()
+
     X_reg = reg_df[all_features]
-    y_reg = reg_df["NEGOTIATION_VAL"]
+    y_reg = reg_df["negotiation_ratio"]
 
     Xr_train, Xr_test, yr_train, yr_test = train_test_split(
         X_reg, y_reg, test_size=0.2, random_state=42

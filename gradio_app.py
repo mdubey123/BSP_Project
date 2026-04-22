@@ -652,53 +652,71 @@ def _kpi_values():
 # DATA PROCESSING
 # ──────────────────────────────────────────────
 def process_data(file, date_from, date_to):
-    if file is None:
-        return "⚠️ Upload an Excel file first.", _EMPTY, _EMPTY, _EMPTY, _EMPTY, "", ""
+    try:
+        if file is None:
+            return "⚠️ Upload an Excel file first.", _EMPTY, _EMPTY, _EMPTY, _EMPTY, "", ""
 
-    log_action(f"UPLOAD: {os.path.basename(file.name)}")
-    all_sheets   = pd.read_excel(file.name, sheet_name=None)
-    combined_df  = pd.concat(all_sheets.values(), ignore_index=True)
-    processed_df = create_features(clean_data(combined_df))
+        log_action(f"UPLOAD: {os.path.basename(file.name)}")
 
-    dcols = [c for c in processed_df.columns if "date" in c.lower() or "dt" in c.lower()]
-    if dcols and date_from and date_to:
-        try:
-            processed_df[dcols[0]] = pd.to_datetime(processed_df[dcols[0]], errors="coerce")
-            processed_df = processed_df[
-                (processed_df[dcols[0]] >= pd.to_datetime(date_from)) &
-                (processed_df[dcols[0]] <= pd.to_datetime(date_to))
-            ]
-        except Exception:
-            pass
+        all_sheets = pd.read_excel(file.name, sheet_name=None)
+        combined_df = pd.concat(all_sheets.values(), ignore_index=True)
 
-    state["df"]    = processed_df
-    state["model"] = train_model(processed_df)
+        processed_df = create_features(clean_data(combined_df))
+        # 🚨 FIX: remove duplicate columns
+        processed_df = processed_df.loc[:, ~processed_df.columns.duplicated()]
 
-    ts, av, tr, lc = _kpi_values()
+        dcols = [c for c in processed_df.columns if "date" in c.lower() or "dt" in c.lower()]
+        if dcols and date_from and date_to:
+            try:
+                processed_df[dcols[0]] = pd.to_datetime(processed_df[dcols[0]], errors="coerce")
+                processed_df = processed_df[
+                    (processed_df[dcols[0]] >= pd.to_datetime(date_from)) &
+                    (processed_df[dcols[0]] <= pd.to_datetime(date_to))
+                ]
+            except Exception:
+                pass
 
-    h1 = _kpi_html("💰 Total Saving",  f"₹{ts:,.0f}", "kpi-green")
-    h2 = _kpi_html("📊 Avg Saving",    f"₹{av:,.2f}", "kpi-blue")
-    h3 = _kpi_html("📦 Total Records", f"{tr:,}",      "kpi-purple")
-    h4 = _kpi_html("⚠️ Loss Cases",    f"{lc:,}",      "kpi-red")
+        state["df"] = processed_df
+        state["model"] = train_model(processed_df)
 
-    alerts = []
-    if tr > 0:
-        lp = lc / tr
-        if lp > LOSS_ALERT_THRESHOLD:
-            alerts.append(f"⚠️ HIGH LOSS RATE: {lp*100:.1f}% of records show negative savings.")
-        if av < SAVING_ALERT_THRESHOLD:
-            alerts.append(f"⚠️ NEGATIVE AVG SAVING: ₹{av:,.2f} — review contracts.")
-    alert_html = (
-        '<div class="alert-warn">' + "<br>".join(alerts) + "</div>" if alerts
-        else '<div class="alert-ok">✅ All KPIs within acceptable thresholds.</div>'
-    )
+        ts, av, tr, lc = _kpi_values()
 
-    status = (
-        f"✅ Loaded: {os.path.basename(file.name)}\n"
-        f"📊 Rows: {len(processed_df):,}  |  Columns: {len(processed_df.columns)}\n"
-        f"📅 Date filter applied: {bool(date_from and date_to)}"
-    )
-    return status, h1, h2, h3, h4, alert_html, _data_quality_report()
+        h1 = _kpi_html("💰 Total Saving", f"₹{ts:,.0f}", "kpi-green")
+        h2 = _kpi_html("📊 Avg Saving", f"₹{av:,.2f}", "kpi-blue")
+        h3 = _kpi_html("📦 Total Records", f"{tr:,}", "kpi-purple")
+        h4 = _kpi_html("⚠️ Loss Cases", f"{lc:,}", "kpi-red")
+
+        alerts = []
+        if tr > 0:
+            lp = lc / tr
+            if lp > LOSS_ALERT_THRESHOLD:
+                alerts.append(f"⚠️ HIGH LOSS RATE: {lp*100:.1f}% of records show negative savings.")
+            if av < SAVING_ALERT_THRESHOLD:
+                alerts.append(f"⚠️ NEGATIVE AVG SAVING: ₹{av:,.2f}")
+
+        alert_html = (
+            '<div class="alert-warn">' + "<br>".join(alerts) + "</div>"
+            if alerts else
+            '<div class="alert-ok">✅ All KPIs within acceptable thresholds.</div>'
+        )
+
+        status = (
+            f"✅ Loaded: {os.path.basename(file.name)}\n"
+            f"📊 Rows: {len(processed_df):,} | Columns: {len(processed_df.columns)}"
+        )
+
+        return status, h1, h2, h3, h4, alert_html, _data_quality_report()
+
+    except Exception as e:
+        return (
+            f"❌ Error: {type(e).__name__}: {e}",
+            _EMPTY,
+            _EMPTY,
+            _EMPTY,
+            _EMPTY,
+            f"<div class='alert-warn'>❌ Error: {type(e).__name__}: {e}</div>",
+            f"❌ Error: {type(e).__name__}: {e}"
+        )
 
 # ──────────────────────────────────────────────
 # DATA QUALITY
@@ -1000,14 +1018,28 @@ def predict(pr, response, techsuit, no_ext, dur_contract,
         input_df = pd.DataFrame([row])
 
         train_features = models["features"]
-
         input_df = input_df.reindex(columns=train_features)
         input_df = input_df.fillna(0)
 
-        predicted_negotiation = models["reg_model"].predict(input_df)[0]
+        predicted_ratio = models["reg_model"].predict(input_df)[0]
+
+        # keep prediction realistic
+        predicted_ratio = max(0, min(predicted_ratio, 1))
+
+        predicted_negotiation = pr * predicted_ratio
         predicted_saving = pr - predicted_negotiation
         predicted_pct = (predicted_saving / pr * 100) if pr else 0
-        predicted_class = models["cls_model"].predict(input_df)[0]
+        # 🎯 Rule-based classification (better than ML here)
+        if predicted_pct < 0:
+            predicted_class = "Loss"
+        elif predicted_pct <= 10:
+            predicted_class = "Low Saving"
+        elif predicted_pct <= 25:
+            predicted_class = "Moderate Saving"
+        else:
+            predicted_class = "High Saving"
+
+        
 
         return (
             f"### 🤖 Prediction Result\n\n"
@@ -1020,7 +1052,6 @@ def predict(pr, response, techsuit, no_ext, dur_contract,
 
     except Exception as e:
         return f"❌ Prediction failed: {type(e).__name__}: {e}"
-
         
 
 def batch_predict(file):
@@ -1039,7 +1070,7 @@ def batch_predict(file):
         idf.to_excel(out, index=False)
         return out, f"✅ Done — {len(idf):,} records processed."
     except Exception as e:
-        return None, f"Error: {e}"
+        return None, f"❌ Error: {type(e).__name__}: {e}"
 
 # ──────────────────────────────────────────────
 # EXPORTS

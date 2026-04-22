@@ -30,8 +30,7 @@ def clean_data(df):
         df = df[df["PR_VALUE"] > 0]
 
     if "NEGOTIATION_VAL" in df.columns:
-        df = df[df["NEGOTIATION_VAL"] > 0]
-
+        df = df[df["NEGOTIATION_VAL"] >= 0]
     return df
 
 
