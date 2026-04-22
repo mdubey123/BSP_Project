@@ -346,23 +346,28 @@ p, li {
     gap: 20px;
 }
 
-/* BRAND BOX */
+/* ===== BRAND BOX ===== */
 #brand-box h1 {
-    font-size: 42px;
+    font-size: 40px;
     font-weight: 800;
     color: #ffffff;
 }
 
 #brand-box .subtitle {
-    font-size: 18px;
-    color: #9ecbff;
+    font-size: 17px;
+    color: #8ad4ff;
     margin-bottom: 10px;
 }
 
 #brand-box .desc {
-    font-size: 15px;
+    font-size: 14px;
     color: #dce9f7;
     line-height: 1.7;
+}
+
+/* bullet accent */
+#brand-box li::marker {
+    color: #00e6c3;
 }
 
 #brand-box ul {
@@ -374,7 +379,7 @@ p, li {
     margin-bottom: 6px;
 }
 
-/* LOGO BIGGER */
+/* LOGO */
 #bsp-logo img {
     max-height: 140px !important;
 }
@@ -384,34 +389,64 @@ p, li {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 12px;
+    gap: 14px;
 }
 
-/* LOGIN BOX (compact) */
+/* ===== LOGIN BOX (FINAL FIX) ===== */
 #login-box {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 18px;
-    padding: 20px;
-    margin-bottom: 10px;
+    background: linear-gradient(135deg, #1c3354, #284b78) !important;
+    border-radius: 16px;
+    padding: 22px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(0,255,200,0.25);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.45);
 }
 
-/* REMOVE OLD BIG CARD EFFECT */
-#login-card {
-    display: none !important;
+/* 🔥 REMOVE ONLY GREY INNER LAYER (SAFE FIX) */
+#login-box .gr-box,
+#login-box .gr-form,
+#login-box .gr-group {
+    background: transparent !important;
 }
 
-/* INPUT FULL WIDTH */
-#right-panel input {
+/* ===== INPUT FIELDS ===== */
+#login-box input {
     width: 100%;
+    background: rgba(10,25,45,0.95) !important;
+    border: 1px solid rgba(0,255,200,0.25) !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    color: #ffffff !important;
 }
 
-/* BUTTON FULL WIDTH */
-#right-panel button {
+/* focus effect */
+#login-box input:focus {
+    border: 1px solid #00e6c3 !important;
+    box-shadow: 0 0 10px rgba(0,230,195,0.4);
+}
+
+/* ===== LABELS ===== */
+#login-box label {
+    color: #cfe3ff !important;
+    font-weight: 600 !important;
+}
+
+/* ===== BUTTON ===== */
+#right-panel button.primary {
     width: 100%;
+    background: linear-gradient(135deg, #00c9a7, #00e6c3) !important;
+    color: #022c22 !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 20px rgba(0,230,195,0.35);
 }
 
-/* REMOVE EXTRA SPACE */
+#right-panel button.primary:hover {
+    background: linear-gradient(135deg, #00b89a, #00d4b0) !important;
+    transform: translateY(-1px);
+}
+
+/* ===== REMOVE EXTRA SPACE ===== */
 .gradio-container .gr-column {
     gap: 12px !important;
 }
@@ -564,6 +599,73 @@ div[class*="overlay"] {
 
 #bsp-gallery {
     background: transparent !important;
+}
+
+/* ===== FORCE REMOVE ALL DEFAULT GRADIO STYLING ===== */
+
+#upload-card div,
+#date-card div,
+#status-card div {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* ===== APPLY YOUR CUSTOM CARD ON EXACT INNER CONTAINER ===== */
+
+#upload-card > div > div,
+#date-card > div > div,
+#status-card > div > div {
+    background: linear-gradient(135deg, #1c3f66, #285b92) !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    border: 1px solid rgba(100,170,255,0.4) !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35) !important;
+}
+
+/* ===== INPUT FIX ===== */
+
+#date-card input {
+    background: rgba(15, 45, 80, 0.9) !important;
+    border-radius: 10px !important;
+    padding: 12px !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(120,180,255,0.4) !important;
+}
+
+/* ===== FILE UPLOAD FIX ===== */
+
+#upload-card .gr-file {
+    background: rgba(15, 45, 80, 0.9) !important;
+    border-radius: 10px !important;
+    padding: 10px !important;
+}
+
+/* ===== STATUS BOX FIX ===== */
+
+#status-card textarea {
+    background: rgba(20, 60, 110, 0.9) !important;
+    border-radius: 12px !important;
+    padding: 14px !important;
+    color: #eaf2ff !important;
+    font-weight: 500;
+}
+
+/* ===== REMOVE ALL INNER BORDERS COMPLETELY ===== */
+
+#upload-card *,
+#date-card *,
+#status-card * {
+    border-width: 0 !important;
+}
+
+/* hover effect */
+#upload-card > div:hover,
+#date-card > div:hover,
+#status-card > div:hover {
+    transform: translateY(-3px);
+    transition: 0.25s ease;
+    box-shadow: 0 14px 35px rgba(0,0,0,0.45);
 }
 """
 # ──────────────────────────────────────────────
@@ -1290,16 +1392,18 @@ with gr.Blocks() as app:
             with gr.Tab("📊 Analytics"):
                 gr.Markdown("## 📂 Dataset Upload")
                 with gr.Row():
-                    uploaded_file = gr.File(
-                        label="Upload Excel Dataset (.xlsx)", scale=3, elem_id="file-upload")
-                    with gr.Column(scale=2):
-                        date_from = gr.Textbox(label="Date From (YYYY-MM-DD)",
-                                               placeholder="e.g. 2024-01-01")
-                        date_to   = gr.Textbox(label="Date To (YYYY-MM-DD)",
-                                               placeholder="e.g. 2024-12-31")
 
-                upload_status = gr.Textbox(
-                    label="📋 Upload Status", interactive=False, lines=3)
+                  # LEFT: Upload Box
+                  with gr.Column(scale=3, elem_id="upload-card"):
+                   uploaded_file = gr.File(label="Upload Excel Dataset (.xlsx)", elem_id="file-upload")
+
+                  # RIGHT: Date Filters
+                  with gr.Column(scale=2, elem_id="date-card"):
+                    date_from = gr.Textbox(label="Date From (YYYY-MM-DD)", placeholder="e.g. 2024-01-01")
+                    date_to = gr.Textbox(label="Date To (YYYY-MM-DD)", placeholder="e.g. 2024-12-31")
+
+                with gr.Column(elem_id="status-card"):
+                 upload_status = gr.Textbox(label="📋 Upload Status", interactive=False, lines=3)
                 alert_html = gr.HTML()
 
                 gr.Markdown("## 📊 Executive KPIs")
@@ -1355,7 +1459,7 @@ with gr.Blocks() as app:
                 vendors_btn.click(fn=compute_processing_metrics, outputs=metrics_out)
                 vendors_btn.click(fn=detect_anomalies, outputs=anomaly_out)
 
-                        # PREDICTION ─────────────────────────
+            # PREDICTION ─────────────────────────
             with gr.Tab("🤖 Prediction"):
                 gr.Markdown("## 🤖 Multi-Layer AI Prediction Engine")
 
